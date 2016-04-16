@@ -1,0 +1,711 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+
+  <head>
+
+    <head profile="http://www.w3.org/2005/10/profile">
+    <link rel="icon"
+         type="image/png"
+         href="/favicon.png" />
+         
+    <title>Rubik's Cube Timer - CubeTimer.com</title>
+    <meta name="description" content="Online Rubik's Cube timer for speedcubing. Super simple yet full featured - scramble generator, inspection timer with sound, automatic averaging and more!">
+    <meta name="keywords" content="Rubik's, Rubik's Cube, Rubik's Cube Timer, Speedcubing, Rubik's Timer Spacebar, Spacebar Timer, Online Rubik's Timer, Olympicube, V-Cube, 6x6x6, 7x7x7, pyraminx, pyramid rubik's cube, megaminx, scramble generator">
+    <meta name="verify-v1" content="9ASxGhWlgrdMzH5dgxPp4yHJaW0p+Qpa1twAuuPJMPw=" />
+
+    <script language="javascript" src="http://www.cubetimer.com/scripts/stdobj.js"></script>
+    <script language="javascript" src="http://www.cubetimer.com/scripts/StopWatch.js"></script>
+    <script language="javascript" src="http://www.cubetimer.com/scripts/ParamString.js"></script>
+    <script language="javascript" src="http://www.cubetimer.com/scripts/cookies.js"></script>
+    <script language="javascript" src="http://www.cubetimer.com/scripts/jquery.js"></script>
+    <script language="javascript" src="http://www.cubetimer.com/scripts/ajax.js"></script>
+    <script language="javascript" src="http://www.cubetimer.com/scripts/soundmanager.js"></script>
+
+    <script language="javascript"><!--
+      function initialize() {
+        reset_timer();
+        session_restore();
+        load_puzzle();
+        generate_scramble();
+      }
+
+      function pushbutton() {
+        if(timer.running()) {
+          stop_timer();
+        }
+        else {
+          if(session_get('insp_time') * 1) {
+            inspection_running = true;
+          }
+          start_timer()
+        }
+      }
+
+      function start_timer() {
+        reset_timer();
+        timer.start();
+        show_time();
+      }
+
+      function stop_timer() {
+        timer.stop();
+        clearTimeout(timer.timer_id);
+
+        if(! inspection_running) {
+          add_time(timer.elapsed());
+        }
+
+        show_time();
+        refresh_stats();
+        generate_scramble();
+
+        inspection_running = false;
+      }
+
+      function refresh_stats() {
+        new_html = '';
+
+        new_html += '<div style="height: 135px; overflow: auto; padding: 5px; margin: 10px; border: 1px solid #89c; background: #fff;">';
+
+        var total = 0;
+        var total_5 = 0;
+        var total_10 = 0;
+        var best = 'x'
+        var worst = 'x'
+        if(time_list.length > 0) {
+          new_html += '<table cellpadding="0" cellspacing="0">';
+          for(i = time_list.length - 1, count = 0; i >= 0; i--, count++) {
+            new_html += '<tr>';
+            new_html += '<td align="right"><strong><em>' + (i + 1) + ':</em></strong></td>';
+            new_html += '<td style="padding: 0 20px;">' + format_time(time_list[i]) + '</td>';
+            new_html += '<td><a href="javascript:remove_time(' + i + ')">x</a></td>';
+            total += time_list[i] * 1;
+            if(count < 5)  { total_5  += time_list[i] * 1; }
+            if(count < 10) { total_10 += time_list[i] * 1; }
+            if(best == 'x' || time_list[i] * 1 < best) { best = time_list[i] * 1; }
+            if(worst == 'x' || time_list[i] * 1 > worst) { worst = time_list[i] * 1; }
+            new_html += '</tr>';
+          }
+          new_html += '</table>';
+        }
+
+        new_html += '</div>';
+
+        document.getElementById('times').innerHTML = new_html;
+
+        var stats_list = new Array();
+
+        stats_list['stat_avg'] = time_list.length >= 1 ? format_time(total / time_list.length) : '--:--.--';
+        stats_list['stat_avg5'] = time_list.length >= 5 ? format_time(total_5 / 5) : stats_list['stat_avg'];
+        stats_list['stat_avg10'] = time_list.length >= 10 ? format_time(total_10 / 10) : stats_list['stat_avg'];
+        stats_list['stat_avg3of5'] = time_list.length >= 5 ? format_time(avg_with_discards(time_list, 5)) : '--:--.--';
+        stats_list['stat_avg10of12'] = time_list.length >= 12 ? format_time(avg_with_discards(time_list, 12)) : '--:--.--';
+        stats_list['stat_best'] = time_list.length >= 1 ? format_time(best) : '--:--.--';
+        stats_list['stat_worst'] = time_list.length >= 1 ? format_time(worst) : '--:--.--';
+
+        for(i in stats_list) {
+          if(document.getElementById(i)) {
+            document.getElementById(i).innerHTML = stats_list[i];
+          }
+        }
+
+        new_html = ''
+
+        document.getElementById('avg').innerHTML = new_html;
+      }
+
+      function show_time() {
+        if(inspection_running) {
+          seconds_left = Math.round( ( (session_get('insp_time') * 1000) - timer.elapsed() ) / 1000 )
+          if(seconds_left > 0) {
+            document.getElementById('elapsed_time').innerHTML = seconds_left;
+            if(seconds_left <= 3 && session_get('insp_sound')) {
+              soundManager.play('beep');
+            }
+            if(timer.running()) { timer.timer_id = setTimeout('show_time()', 1000); }
+          }
+          else {
+            timer.stop();
+            reset_timer();
+            timer.start();
+
+            if(session_get('insp_sound')) {
+              soundManager.play('pop');
+            }
+
+            inspection_running = false;
+
+            document.getElementById('elapsed_time').innerHTML = format_time(0);
+            if(timer.running()) { timer.timer_id = setTimeout('show_time()', 15); }
+          }
+        }
+        else {
+          document.getElementById('elapsed_time').innerHTML = format_time(timer.elapsed());
+          if(timer.running()) { timer.timer_id = setTimeout('show_time()', 15); }
+        }
+      }
+
+      function format_time(time) {
+        time *= 1;
+        timer.time_segments[0] = lpad(Math.floor(time / 60000), 2, "0"); time %= 60000;
+        timer.time_segments[1] = lpad(Math.floor(time / 1000), 2, "0"); time %= 1000;
+        timer.time_segments[2] = lpad(Math.floor(time / 10), 2, "0", true);
+
+        return timer.time_segments[0] + ":" + timer.time_segments[1] + "." + timer.time_segments[2];
+      }
+
+      function reset_timer() {
+        if(!timer.running()) {
+          for(var i = 0; i < timer.time_segments.length; i++) timer.time_segments[i] = "00";
+          timer.reset();
+          show_time();
+        }
+      }
+
+      function lpad(s, l, c, t) {
+        s += "";
+        c = c || " ";
+        while(s.length < l)
+          s = c + s;
+        return t && s.length > l ? s.substr(0, l) : s;
+      }
+
+      function add_time(time) {
+        time_list[time_list.length] = time;
+        save_time(time, selected_puzzle);
+        session_save();
+      }
+
+      function remove_time(i) {
+        time_list.splice(i, 1);
+        refresh_stats();
+        session_save();
+      }
+
+      function clear_times() {
+        if(time_list.length && confirm('Drop ALL time entries from the this log? The logs for your other puzzles will remain unaffected.')) {
+          eval('time_list = time_list_' + selected_puzzle + ' = new Array();');
+          refresh_stats();
+          session_save();
+        }
+      }
+
+      function switch_puzzles() {
+        var new_html = '<select style="width: 190px;" onchange="selected_puzzle = options[selectedIndex].value; load_puzzle();">';
+
+        for(var i in puzzle_names) {
+          new_html += '<option value="' + i + '"' + (i == selected_puzzle ? ' selected="selected"' : '') + '>' + puzzle_names[i] + '</option>';
+        }
+
+        new_html += '</select>';
+        new_html += ' <a href="javascript:cancel_switch_puzzles()" style="font-size: 10px;">cancel</a>';
+        document.getElementById('puzzle_selector').innerHTML = new_html;
+      }
+
+      function cancel_switch_puzzles() {
+        document.getElementById('puzzle_selector').innerHTML = '<h3 style="margin: 0;">' + puzzle_names[selected_puzzle] + '</h3>';
+      }
+ 
+      function load_puzzle() {
+        eval('time_list = time_list_' + selected_puzzle + ';');
+        document.getElementById('puzzle_selector').innerHTML = '<h3 style="margin: 0;">' + puzzle_names[selected_puzzle] + '</h3>';
+        refresh_stats();
+        session_save();
+
+        var scramble_supported = [ '222', '222bf', '333', '333bf', '333oh', '333ft', '444', '444bf', '555', '555bf' ];
+        scramble_is_supported = false;
+        for(i in scramble_supported) {
+          if(selected_puzzle == scramble_supported[i]) {
+            scramble_is_supported = true;
+            break;
+          }
+        }
+        generate_scramble();
+        document.getElementById('scramble').style.display = scramble_is_supported ? '' : 'none';
+      }
+
+      function session_save() {
+        for(i in puzzle_names) {
+          eval('params[\'time_list_' + i + '\'] = time_list_' + i + '.join(\',\');');
+        }
+        params['selected_puzzle'] = selected_puzzle;
+//        params['time_list'] = time_list.join(',');
+        setCookie('cubetimer', params.toString(), 24 * 30);
+      }
+
+      function session_get(key) {
+        return params[key];
+      }
+
+      function session_set(key, val) {
+        params[key] = val;
+        session_save();
+      }
+
+      function session_unset(key) {
+        delete params[key];
+      }
+
+      function session_restore() {
+        var cookie = readCookie('cubetimer');
+
+        if(cookie) {
+          params = new ParamString(cookie);
+
+          if(params['time_list']) {
+            time_list_333 = params['time_list'].split(',');
+          }
+
+          for(i in puzzle_names) {
+            if(params['time_list_' + i]) {
+              eval('time_list_' + i + ' = params[\'time_list_' + i + '\'].split(\',\');');
+            }
+            else if(i != 333) {
+              eval('time_list_' + i + ' = new Array();');
+            }
+          }
+
+          if(params['selected_puzzle']) {
+            selected_puzzle = params['selected_puzzle'];
+          }
+
+          document.settings_form.insp_time.value = session_get('insp_time') ? session_get('insp_time') : '0';
+          document.settings_form.insp_sound.checked = session_get('insp_sound') ? true : false;
+        }
+      }
+
+      function save_settings() {
+        session_set('insp_time', document.settings_form.insp_time.value);
+        session_set('insp_sound', document.settings_form.insp_sound.checked ? '1' : '');
+      }
+
+      function show_info() {
+        $('#short_info').hide('fast');
+        $('#full_info').slideDown('slow');
+      }
+
+      function hide_info() {
+        $('#full_info').slideUp('fast');
+        $('#short_info').slideDown('fast');
+      }
+
+      function avg_with_discards(a, segment) {
+
+        if(segment) { a = a.slice(-segment); }
+
+        highest = lowest = null;
+        total = 0;
+
+        for(var i in a) {
+          time = a[i] * 1;
+
+          if(lowest == null || time < lowest) { lowest = time; }
+          if(highest == null || time > highest) { highest = time; }
+
+          total += time;
+        }
+
+        total -= (lowest + highest);
+        count = (segment ? segment : a.length) - 2;
+
+        return total / count;
+      }
+
+      function save_time(time, puzzle){
+          var ajax_params = new Array();
+          ajax_params['seconds'] = time / 1000;
+          ajax_params['puzzle'] = puzzle;
+
+          // call ajax
+          ajax_call('timelog_insert', 'timelog_insert_cb', ajax_params);
+      }
+
+      function timelog_insert_cb(data){
+          return true;
+      }
+
+
+      function Scramble(puzzle, turns) {
+        this.puzzle = puzzle || 333;
+
+        switch(puzzle) {
+          case '444':
+          case '444bf':
+          case '555':
+          case '555bf':
+            this.turns = turns || (puzzle.indexOf('444') == 0 ? 40 : 60);
+            this.faces = {
+              'R'  : { 'allowed' : true, 'enables' : ['U', 'Uw', 'D', 'Dw', 'F', 'Fw', 'B', 'Bw'] },
+              'Rw' : { 'allowed' : true, 'enables' : ['U', 'Uw', 'D', 'Dw', 'F', 'Fw', 'B', 'Bw'] },
+              'L'  : { 'allowed' : true, 'enables' : ['U', 'Uw', 'D', 'Dw', 'F', 'Fw', 'B', 'Bw'] },
+              'Lw' : { 'allowed' : true, 'enables' : ['U', 'Uw', 'D', 'Dw', 'F', 'Fw', 'B', 'Bw'] },
+              'U'  : { 'allowed' : true, 'enables' : ['R', 'Rw', 'L', 'Lw', 'F', 'Fw', 'B', 'Bw'] },
+              'Uw' : { 'allowed' : true, 'enables' : ['R', 'Rw', 'L', 'Lw', 'F', 'Fw', 'B', 'Bw'] },
+              'D'  : { 'allowed' : true, 'enables' : ['R', 'Rw', 'L', 'Lw', 'F', 'Fw', 'B', 'Bw'] },
+              'Dw' : { 'allowed' : true, 'enables' : ['R', 'Rw', 'L', 'Lw', 'F', 'Fw', 'B', 'Bw'] },
+              'F'  : { 'allowed' : true, 'enables' : ['R', 'Rw', 'L', 'Lw', 'U', 'Uw', 'D', 'Dw'] },
+              'Fw' : { 'allowed' : true, 'enables' : ['R', 'Rw', 'L', 'Lw', 'U', 'Uw', 'D', 'Dw'] },
+              'B'  : { 'allowed' : true, 'enables' : ['R', 'Rw', 'L', 'Lw', 'U', 'Uw', 'D', 'Dw'] },
+              'Bw' : { 'allowed' : true, 'enables' : ['R', 'Rw', 'L', 'Lw', 'U', 'Uw', 'D', 'Dw'] }
+            };
+            this.face_index = ['R', 'Rw', 'L', 'Lw', 'U', 'Uw', 'D', 'Dw', 'F', 'Fw', 'B', 'Bw'];
+            break;
+
+          case '222': case '222bf': case '333': case '333bf': case '333oh': case '333ft':
+          default:
+            this.turns = turns || 25;
+            this.faces = {
+              'R' : { 'allowed' : true, 'enables' : ['U', 'D', 'F', 'B'] },
+              'L' : { 'allowed' : true, 'enables' : ['U', 'D', 'F', 'B'] },
+              'U' : { 'allowed' : true, 'enables' : ['R', 'L', 'F', 'B'] },
+              'D' : { 'allowed' : true, 'enables' : ['R', 'L', 'F', 'B'] },
+              'F' : { 'allowed' : true, 'enables' : ['R', 'L', 'U', 'D'] },
+              'B' : { 'allowed' : true, 'enables' : ['R', 'L', 'U', 'D'] }
+            };
+            this.face_index = ['R', 'L', 'U', 'D', 'F', 'B'];
+            break;
+        }
+        this.scramble = [];
+        this.generate()
+      }
+      Scramble.prototype.generate = Scramble_generate
+      Scramble.prototype.toString = Scramble_toString
+
+      function Scramble_generate() {
+        this.scramble = [];
+
+        for(i = 0; i < this.turns; i++) {
+          do {
+            rand = Math.floor(Math.random() * (this.face_index.length));
+            face = this.face_index[rand];
+          } while(! this.faces[face]['allowed'])
+
+          this.faces[face]['allowed'] = false;
+
+          for(f = 0; f < this.faces[face]['enables'].length; f++) {
+            this.faces[this.faces[face]['enables'][f]]['allowed'] = true;
+          }
+
+          switch(Math.floor(Math.random() * 3)) {
+            case 0: direction = "";  break;
+            case 1: direction = "'"; break;
+            case 2: direction = "2"; break;
+          }
+
+          this.scramble[i] = face + direction;
+        }
+      }
+
+      function Scramble_toString() {
+        return this.scramble.join(' ');
+      }
+
+      function get_scramble(puzzle, turns) {
+        var puzzle = puzzle || selected_puzzle;
+        return (new Scramble(puzzle, turns)).toString();
+      }
+
+      function generate_scramble() {
+        s = get_scramble()
+        s = s.replace(/ /g, ' &nbsp;')
+        document.getElementById('scramble').innerHTML = 'Scramble:&nbsp;&nbsp;' + s
+      }
+
+
+      var timer = new StopWatch();
+      timer.time_segments = new Array();
+      timer.timer_id = 0;
+      time_list = new Array();
+      inspection_running = false;
+      params = new ParamString('');
+      var puzzle_names = {
+        '222' : '2x2x2 Cube',
+        '333' : 'Rubik\'s Cube',
+        '444' : '4x4x4 Cube',
+        '555' : '5x5x5 Cube',
+        '666' : '6x6x6 Cube',
+        '777' : '7x7x7 Cube',
+        '333bf' : '3x3x3 Blindfolded',
+        '333oh' : '3x3x3 One-Handed',
+        '333ft' : '3x3x3 With Feet',
+        'magic' : 'Rubik\'s Magic',
+        'mmagic' : 'Rubik\'s Master Magic',
+        'minx' : 'Megaminx',
+        'pyram' : 'Pyraminx',
+        'sq1' : 'Square-1',
+        'skewb' : 'Skewb',
+        'clock' : 'Rubik\'s Clock',
+        '222bf' : '2x2x2 Blindfolded',
+        '444bf' : '4x4x4 Blindfolded',
+        '555bf' : '5x5x5 Blindfolded',
+        'siam'  : 'Siamese Cube'
+      }
+
+      for(i in puzzle_names) {
+        eval('time_list_' + i + ' = new Array();');
+      }
+
+      selected_puzzle = 333;
+
+    //--></script>
+
+    <style type="text/css">
+      body {
+        text-align: center;
+        font-family: arial;
+        font-size: 11pt;
+        margin: 0;
+        padding: 0;
+      }
+      .txt-replace {
+        display: block;
+      }
+      .txt-replace span {
+        position: relative;
+        left: -10000px;
+      }
+      #stats { border: 1px solid #b0b4cc; background: #f0f4ff; margin-bottom: 10px; }
+      #stats td { font-size: 12px;  width: 25%; }
+      #stats label { font-size: 10px; color: #2A344A; display: block; text-align: right; padding-right: 5px; }
+      #times { font-size: 13px; line-height: 130%; letter-spacing: 1px; color: #336; }
+      p.bottom-links {
+        display: none;
+        border-top: 1px solid #ccc;
+        margin-top: 30px;
+        padding-top: 10px;
+        font-size: 12px;
+      }
+      p.bottom-links a {
+        margin: 0 25px;
+      }
+      #adsense_top { float: left; margin-top: 5px; }
+      #nav { text-align: right; font-size: 12px; padding: 4px 25px; margin: 0 0 2px 0; }
+      #short_info {  }
+      #short_info h2 { margin-bottom: 5px; font-size: 14px; }
+      #full_info { margin-top: 15px; border: 1px solid #cdc; background: #f0f8f0; width: 75%; padding: 15px 30px; font-size: 12px; line-height: 130%; }
+      #scramble { margin-top: 32px; color: #89c; font-size: 13px; background: #eef; border: 1px solid #dde; }
+    </style>
+
+  </head>
+  <body style="background: url('cubetimer3.png') center 15px no-repeat;" onload="initialize()" onkeyup="if(event.keyCode == 32) { pushbutton(); }">
+
+    <div style="float: left;"><!-- soundManager appends "hidden" Flash to the first DIV on the page. --></div>
+
+    <div style="width: 1000px; margin: 0 auto; text-align: left;">
+
+      <div id="adsense_top">
+        <script type="text/javascript"><!--
+        google_ad_client = "pub-4555561094540535";
+        /* 468x15, created 2/19/09 */
+        google_ad_slot = "4520673730";
+        google_ad_width = 468;
+        google_ad_height = 15;
+        //-->
+        </script>
+        <script type="text/javascript"
+        src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+        </script>
+      </div>
+
+      <p id="nav">
+
+          <a href="/" title="Rubik's Cube Timer">Rubik's Cube Timer</a> &nbsp;&nbsp; | &nbsp;&nbsp;
+          <a href="/videos.htm" title="Rubik's Cube Videos">Videos</a> &nbsp;&nbsp; | &nbsp;&nbsp;
+          <a href="/links.htm" title="Rubik's Cube Links">Links</a> &nbsp;&nbsp; | &nbsp;&nbsp;
+          <script language="javascript"><!--
+            document.writeln(
+              '<a href="'+
+              'm'+
+              'ail'+
+              'to'+
+              ':da'+
+              'n@'+
+              'cub'+
+              'etim'+
+              'er.c'+
+              'om">'+
+              'Email Me!</a>'
+            );
+          //--></script>
+
+      </p>
+
+      <div style="font-size: 10px; color: #336; letter-spacing: 1px; margin-bottom: 5px; display: none;">
+        <strong style="color: #c00;">New Logo!</strong> Thanks to Raz for the new CubeTimer.com logo. If you need a logo yourself, 
+        <script language="javascript"><!--
+          document.writeln(
+            '<a href="'+
+            'm'+
+            'ail'+
+            'to'+
+            ':sa'+
+            'pir'+
+            'az@'+
+            'dn'+
+            'x.c'+
+            'o.il" style="color: #006;">' +
+            'send him an email!</a>'
+          );
+        //--></script>. Thanks again, Raz!
+      </div>
+
+    </div>
+
+    <table width="1000" cellpadding="10" cellspacing="25" align="center" style="border-bottom: 1px solid #ccc;">
+      <tr>
+        <td valign="top" align="center">
+          <h1 class="txt-replace" style="height: 106px; width: 416px; margin: 0 auto;"><span>Rubik's Cube Timer</span></h1>
+
+          <div id="scramble"></div>
+
+          <div id="elapsed_time" style="font-size: 150px; font-style: italic; font-weight: bold; margin: 10px 0 10px; color: #2A344A;">&nbsp;</div>
+          <div id="short_info">
+            <h2>A free, online Rubik's Cube Timer for <strong>speedcubing</strong>. Hit your <img src="spacebar.gif" border="0" style="position: relative; top: 2px;" title="spacebar" /> to start/stop.</h2>
+            <small><a href="#" onclick="show_info();">Click here for more info &#187;</a></small>
+                      </div>
+          <div id="full_info">
+            <p>
+              After my first
+              <a href="http://www.worldcubeassociation.org/results/p.php?i=2007DAIL01">WCA speedcubing competition</a> in 2007,
+              I made this Rubik's timer for speedcubing to improve my solution times. Now my hobby has become my obsession, complete with all the normal cubes (2x2, 3x3, 4x4, 5x5) as well as the Rubik's Snake, Rubik's Magic, Pyraminx, Megaminx, and even the new <strong>6x6x6</strong> and <strong>7x7x7</strong> cubes from <a href="http://www.v-cubes.com/">V-Cube</a> (previously <a href="http://www.olympicube.com/">Olympicube</a>)!!
+            </p>
+
+            <h3>How the Timer Works</h3>
+
+              <p>
+              <strong>To start:</strong> hit your spacebar<br />
+              <strong>To stop:</strong> hit your spacebar
+            </p>
+
+            <p>Still confused? Just hit your spacebar... really...</p>
+
+            <p>
+              Your solve times will be stored in the time log to the right using a cookie, so they'll still be there when you come back.
+              You have the ability to clear the solve times individually, or all at once. Your average times will be automagically calculated.
+              Note that the 3 of 5 and 10 of 12 averages throw out your highest and lowest times and only average what's left, just like in
+              an official speedcubing competition.
+            </p>
+            <p>
+              You can keep your solve times separated by puzzle by using the "switch puzzle" link above the time log. You can also use the
+              inspection timer with an optional sound cue to let you know when the timer starts. The scramble generator is provided as a
+              means of ensuring you aren't being too easy on yourself.
+            </p>
+            <p>
+              More features to come, so come back soon...
+            </p>
+
+            <script language="javascript"><!--
+              document.writeln(
+                '<p style="font-size: 10px;">Questions? Feedback? Suggestions? '+
+                '<a href="'+
+                'm'+
+                'ail'+
+                'to'+
+                ':da'+
+                'n@'+
+                'cub'+
+                'etim'+
+                'er.c'+
+                'om">'+
+                'Email Me!</a></p>'
+              );
+            //--></script>
+
+            <p><a href="#" onclick="hide_info();">click here to close</a></p>
+          </div>
+
+          <script language="javascript"><!--
+            $('#full_info').hide();
+          //--></script>
+
+        </td>
+        <td valign="top" align="center" style="border: 1px solid #89c; background: #BACAFE url('stats_bg.jpg') repeat-x; width: 250px;">
+
+          <div id="time_log">
+            <form name="time_log_form">
+              <div style="font-size: 11px;">Time Log For</div>
+              <div id="puzzle_selector"><h3>Rubik's Cube</h3></div>
+
+              <div style="margin: 5px 0; font-size: 10px;">
+                <a href="javascript:switch_puzzles()">switch puzzle</a> &nbsp; &nbsp;
+                <a href="javascript:clear_times()">clear times</a>
+              </div>
+
+              <div id="times" style="margin-top: 10px;">&nbsp;</div>
+
+              <div id="avg" style="margin-top: 10px;">&nbsp;</div>
+              <div id="stats">
+                <table border="0" cellspacing="5" cellpadding="0" width="100%">
+                  <tr>
+                    <td><label>Average:</label></td>
+                    <td id="stat_avg">--:--.--</td>
+                    <td><label>Best:</label></td>
+                    <td id="stat_best">--:--.--</td>
+                  </tr>
+                  <tr>
+                    <td><label>Avg. 5:</label></td>
+                    <td id="stat_avg5">--:--.--</td>
+                    <td><label>3 of 5:</label></td>
+                    <td id="stat_avg3of5">--:--.--</td>
+                  </tr>
+                  <tr>
+                    <td><label>Avg. 10:</label></td>
+                    <td id="stat_avg10">--:--.--</td>
+                    <td><label>10 of 12:</label></td>
+                    <td id="stat_avg10of12">--:--.--</td>
+                  </tr>
+                </table>
+              </div>
+            </form>
+
+            <form name="settings_form" style="margin: 10px 0; font-size: 11px;">
+              <div id="settings_panel">
+                Inspection Time:
+                <select name="insp_time" style="font-size: 11px;" onchange="save_settings();" onclick="blur();">
+                  <option value="0">no inspection</option>
+                  <option value="3">3 seconds</option>
+                  <option value="5">5 seconds</option>
+                  <option value="10">10 seconds</option>
+                  <option value="15">15 seconds</option>
+                </select><br />
+                <input type="checkbox" id="insp_sound" name="insp_sound" onclick="save_settings();" />
+                <label for="insp_sound">play sound after inspection</label>
+              </div>
+            </form>
+
+          </div>
+
+        </td>
+      </tr>
+    </table>
+
+    <p class="bottom-links">
+      <a href="#">about</a>
+      <a href="#">settings</a>
+      <a href="#">links</a>
+      <a href="#">feedback</a>
+    </p>
+
+    <script type="text/javascript">soundManagerInit();</script>
+
+    
+    <script type="text/javascript"><!--
+      google_ad_client = "pub-4555561094540535";
+      /* Homepage - banner at bottom */
+      google_ad_slot = "2052195324";
+      google_ad_width = 728;
+      google_ad_height = 90;
+    //--></script>
+    <script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"></script>
+
+    
+
+    <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      _uacct = "UA-512536-6";
+      urchinTracker();
+    </script>
+
+  </body>
+
+</html>

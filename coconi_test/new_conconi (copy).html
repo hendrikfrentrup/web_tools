@@ -1,0 +1,83 @@
+<!DOCTYPE html> <!--HTML5 doctype indicator-->
+<html>
+
+<head>
+    <!-- Copyright Hendrik Frentrup 21.05.2013. -->
+    <title>Conconi Test (browser-based HTML5+js)</title>
+    <script src="http://code.jquery.com/jquery-git2.js"></script>
+    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script src="http://code.highcharts.com/modules/exporting.js"></script>
+    
+    <script type="text/javascript" src="scripts/coconi_stopwatch.js"></script>
+    <script type="text/javascript" src="scripts/control.js"></script>
+    <script type="text/javascript" src="scripts/plot.js"></script>    
+
+    <link href="stylesheets/new_clock.css" rel="stylesheet" type="text/css">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+</head>
+
+<body>
+
+
+
+<div id="page">
+
+    <div id="ctrl_container">
+
+        <div class="box" id="time_box">
+            <input class="clock display" id="clock" name="clock" type="text" value="00:00:0" readonly>
+            <input class="clock button" id="startstopbutton" type="button" value="Start" onClick="startstop();"> 
+        </div>
+
+        <div class="box" id="hr_box">
+            <input class="display" id="h_rate" name="h_rate" type="number" value="120" min="80" step="1">
+            <div class="btn_container">
+                <div class="updown button" id="hr_up">+</div>
+                <div class="updown button" id="hr_down">-</div>
+            </div>
+        </div>
+        
+        <div class="box" id="speed_box">
+            <input class="display" id="speed" name="speed" type="number" value="9.0" min="6.0" step="0.1">
+            <div class="btn_container">
+                <div class="updown button" id="speed_up">+0.5</div>
+                <div class="updown button" id="speed_down">-0.5</div>
+            </div>
+        </div>
+        
+        <div class="box" id="control_box"> 
+            <!--Keyboard control switched off at the moment-->
+            <input class="ctrl button" id="splitbutton" type="button" value="Split" onClick="splittime();">
+            <input class="ctrl button" id="resetbutton" type="button" value="Reset" onClick="resetclock();">
+            <input class="ctrl button" id="plot" type="button" value="Plot">
+        </div>
+
+    </div> 
+    
+    
+    
+    
+    <div id="plot_container">
+    
+        <div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+    
+    </div>
+    
+    
+    
+      
+    
+    <div id="hidden_output">
+        <hr>
+        <form method='post' action='/analysis'>
+            Time splits [mm:ss:ds] | Heart Rate [bpm] | Speed [km/h] <br>
+            <textarea id="output" style="width: 415px; height: 35px; border:1px solid gray"></textarea>
+            <div class='control'>
+                <!--    <input id="submitbutton" type="submit" value="Submit">-->
+            </div>
+        </form>
+    </div>  
+</div>
+</body>
+</html>

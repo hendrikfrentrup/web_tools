@@ -1,0 +1,16 @@
+<html>
+<head>
+</head>
+<body>
+	<label for="clock">Time: </label> <input id="clock" name="clock" type="text" value="00:00:0" readonly> min:sec:decisec<br>
+	<label for="h_rate">Heart Rate: </label> <input id="h_rate" name="h_rate" type="number" value="100"> bpm <br>
+	<label for="speed">Speed: </label> <input id="speed" name="speed"type="number" value="8.0"> km/h <br>
+<hr>
+	<input id="startstopbutton" type="button" value="Start" onClick="startstop();"><br>
+	<input id="splitbutton" type="button" value="Split time" onClick="splittime();"><br>
+	<input id="resetbutton" type="button" value="Reset" onClick="resetclock();"><br>
+
+	<textarea id="output" style="height: 295px;border:1px solid gray"></textarea>
+
+</body>
+</html>

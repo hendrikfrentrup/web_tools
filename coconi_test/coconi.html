@@ -1,0 +1,81 @@
+<html>
+
+<head>
+    <!-- Copyright Hendrik Frentrup 21.05.2013. -->
+    <title>Conconi Test (browser-based HTML5+js)</title>
+    <script type="text/javascript" src="scripts/coconi_stopwatch.js"></script>
+    <script type="text/javascript" src="scripts/plotting_script.js"></script>
+    <link href="stylesheets/clock.css" rel="stylesheet" type="text/css"> 
+</head>
+
+<body>
+
+<div id='container'>
+
+<div id='left'>
+<form action='#'>
+    <fieldset>
+        <legend>Your stats</legend>
+  
+        <div class='stat'>
+            <label for="clock">Time [mm:ss:ds]</label>
+            <input id="clock" name="clock" type="text" value="00:00:0" readonly> <br>
+        </div>
+
+        <div class='stat'>
+            <label for="h_rate">Heart Rate [bpm]</label>
+            <input id="h_rate" name="h_rate" type="number" value="100" min="80" step="1"> <br>
+        </div>
+
+        <div class='stat'>
+            <label for="speed">Speed [km/h]</label>
+            <input id="speed" name="speed" type="number" value="8.0" min="6.0" step="0.1"> <br>
+        </div>
+    </fieldset>
+
+<br>
+
+    <fieldset>
+        <legend>Control</legend>
+
+        <div class='control'>
+            <label for="clock">Clock:</label>
+            <input id="startstopbutton" type="button" value="Start" onClick="startstop();"> 
+        </div>
+
+        <div class='control'>
+            <label for="clock">Add a split:</label>
+            <input id="splitbutton" type="button" value="Split time" onClick="splittime();"> (click or press enter)
+        </div>
+
+        <div class='control'>
+            <label for="clock">Clear table below:</label>
+            <input id="resetbutton" type="button" value="Reset" onClick="resetclock();"> 
+        </div>
+    </fieldset>
+</form>
+
+
+<!--<hr>-->
+
+<form method='post' action='/analysis'>
+    Time splits [mm:ss:ds] | Heart Rate [bpm] | Speed [km/h] <br>
+    <textarea id="output" style="width: 415px; height: 17px; border:1px solid gray"></textarea>
+    <div class='control'>
+    <input id="submitbutton" type="submit" value="Submit">
+    <input id="drawbutton" type="button" value="Draw" onClick="draw();">
+    </div>
+</form>    
+</div>
+
+<div id='right'>
+  <canvas id="canvas" width="415" height="108"></canvas>  
+  <!--<div id="chart_div" style="width: 900px; height: 500px;"></div>-->
+</div>
+
+<div class="clear"></div>
+</div>
+
+</body>
+</html>
+
